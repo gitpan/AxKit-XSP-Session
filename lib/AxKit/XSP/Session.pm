@@ -12,30 +12,32 @@ use vars qw/@ISA $NS $VERSION $SESSION/;
 @ISA = ('Apache::AxKit::Language::XSP');
 $NS = 'http://www.apache.org/1999/XSP/Session';
 
-$VERSION = "0.1";
+$VERSION = "0.11";
 
 ## Taglib subs
 
 sub get_attribute
 {
-	my ( $attribute ) = @_;
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	return $session->{$attribute};
+    my ( $attribute ) = @_;
+    $attribute =~ s/^\s*//;
+    $attribute =~ s/\s*$//;
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    return $session->{$attribute};
 }
 
 sub get_attribute_names
 {
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	return keys(%$session);
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    return keys(%$session);
 }
 
 sub get_id
 {
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	return $session->{_session_id};
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    return $session->{_session_id};
 }
 
 # I've changed the API for this particular tag.  The Cocoon XSP definition for get-creation-time
@@ -45,10 +47,10 @@ sub get_id
 # please tell me; otherwise, I'll leave it out.
 sub get_creation_time
 {
-	my ( $as ) = @_;
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	return _get_time( $as, $session->{_creation_time} );
+    my ( $as ) = @_;
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    return _get_time( $as, $session->{_creation_time} );
 }
 
 # Ahh, the wonders of "Copy-Paste(tm)" technology!  Since it's late at night, and this
@@ -56,70 +58,78 @@ sub get_creation_time
 # subroutine.  If anyone feels so inclined, you're welcome to clean this up. :)
 sub get_last_accessed_time
 {
-	my ( $as ) = @_;
-	my $r = Apache->request;
-	return undef unless ( $r->dir_config( 'UseSessionAccessTimestamp' ) =~ /on/i );
+    my ( $as ) = @_;
+    my $r = Apache->request;
+    # This isn't necessary anymore
+    # TODO update the documentation to reflect this
+    #return undef unless ( $r->dir_config( 'UseSessionAccessTimestamp' ) =~ /on/i );
 
-	my $session = $r->pnotes('xsp_session');
-	return _get_time( $as, $session->{_last_accessed_time} );
+    my $session = $r->pnotes('xsp_session');
+    return _get_time( $as, $session->{_last_accessed_time} );
 }
 
 sub _get_time
 {
     my ( $as, $time ) = @_;
-	$as = 'string' unless ( $as );
-	my $formatted_time = undef;
-	if ( $as eq 'long' )
-	{
-		return $time;
-	}
-	elsif ( $as eq 'string' )
-	{
-		# Outputs a string like "Wed Jun 13 15:57:06 EDT 2001"
-		return time2str('%a %b %d %H:%M:%S %Z %Y', $time);
-	}
+    $as = 'string' unless ( $as );
+    my $formatted_time = undef;
+    if ( $as eq 'long' )
+    {
+        return $time;
+    }
+    elsif ( $as eq 'string' )
+    {
+        # Outputs a string like "Wed Jun 13 15:57:06 EDT 2001"
+        return time2str('%a %b %d %H:%M:%S %Z %Y', $time);
+    }
 }
 
 sub set_attribute
 {
-	my ( $attribute, $value ) = @_;
-	# exit out if they try to set any magic keys
-	return if ( $attribute =~ /^_/ );
+    my ( $attribute, $value ) = @_;
+    $attribute =~ s/^\s*//;
+    $attribute =~ s/\s*$//;
+    $value =~ s/^\s*//;
+    $value =~ s/\s*$//;
+    # exit out if they try to set any magic keys
+    return if ( $attribute =~ /^_/ );
+    #print STDERR "set-attribute: \$attribute=\"$attribute\", \$value=\"$value\".\n";
 
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	$session->{$attribute} = $value;
-	return;
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    $session->{$attribute} = $value;
+    return;
 }
 
 sub remove_attribute
 {
-	my ( $attribute ) = @_;
-	# exit out if they try to set any magic keys
-	return if ( $attribute =~ /^_/ );
+    my ( $attribute ) = @_;
+    $attribute =~ s/^\s*//;
+    $attribute =~ s/\s*$//;
+    # exit out if they try to set any magic keys
+    return if ( $attribute =~ /^_/ );
+    #print STDERR "remove-attribute: \$attribute=\"$attribute\".\n";
 
-	my $r = Apache->request;
-	my $session = $r->pnotes('xsp_session');
-	delete $session->{$attribute};
-	return;
+    my $r = Apache->request;
+    my $session = $r->pnotes('xsp_session');
+    delete $session->{$attribute};
+    #print STDERR "remove-attribute: value=\"" . $session->{$attribute} . "\".\n";
+    return;
 }
 
 sub invalidate
 {
-	my $r = Apache->request;
-	my $session_obj = $r->pnotes('xsp_session_ref');
-    print STDERR "INVALIDATE: Start\n";
-    print STDERR "Object: $session_obj\n";
-	$session_obj->delete;
-    print STDERR "INVALIDATE: End\n";
-	return;
+    my $r = Apache->request;
+    my $session_obj = $r->pnotes('xsp_session_ref');
+    $session_obj->delete;
+    return;
 }
 
 ## Parser subs
 
 sub parse_start {
     my ($e, $tag, %attribs) = @_; 
-    warn "Checking: $tag\n";
+    #warn "Checking: $tag\n";
 
     if ($tag eq 'get-attribute') 
     {
@@ -210,7 +220,7 @@ sub parse_start {
 
 sub parse_char {
     my ($e, $text) = @_;
-    return '' unless $text;
+    return '' unless $text =~ /\S/;
 
     $text =~ s/\|/\\\|/g;
     $text =~ s/\\$/\\\\/gsm;
@@ -322,12 +332,7 @@ makes "long" the default, while mine specifies "string" as default.
 =head2 C<<session:get-last-accessed-time>>
 
 Similar to :get-creation-time, except it returns the time since this session
-was last accessed (duh).  Support for this is not enabled by default, since
-for this to work the session object needs to be updated on every request.  On
-some installations this may incur a lot of overhead, so you need to enable this
-in your httpd.conf by setting:
-
-    PerlSetVar UseSessionAccessTimestamp On
+was last accessed (duh).
 
 =head2 C<<session:remove-attribute>>
 

@@ -4,7 +4,7 @@ use Apache::Request;
 use constant DEBUG => 0;
 use lib qw( $VERSION %session );
 
-$VERSION = 0.1;
+$VERSION = 0.11;
 
 sub handler
 {
